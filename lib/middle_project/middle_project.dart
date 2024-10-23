@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 void main() {
   runApp(MyApp());
@@ -13,101 +14,77 @@ class MyApp extends StatelessWidget {
     return CupertinoApp(
       title: _title,
       theme: CupertinoThemeData(
-        brightness: Brightness.dark, // 전체적으로 다크 테마 적용
+        brightness: Brightness.dark,
       ),
       home: CalculatorApp(),
     );
   }
 }
 
+// 상태 관리 위젯
 class CalculatorApp extends StatefulWidget {
   @override
   _CalculatorAppState createState() => _CalculatorAppState();
 }
 
+
+// UI의 동작 관리
 class _CalculatorAppState extends State<CalculatorApp> {
-  String input = ''; // 입력 필드에 보여줄 값 (연산자 포함)
-  String result = ''; // 결과값
-  double? firstOperand; // 첫 번째 피연산자
-  String? operator; // 연산자
-  bool isNextOperand = false; // 다음 피연산자 입력 여부 확인용
+  String input = ''; // 입력 필드에 보여줄 값, 이곳에서 식을 입력을 하고 '=' 버튼을 누르면 계산이 된다.
+  String result = ''; // input 필드 식의 결과값이 저장된다.
   bool hasResult = false; // 연산 결과가 표시되었는지 여부
 
   void buttonPressed(String value) {
     setState(() {
-      // 이전 연산 결과가 있고 새로운 입력이 시작되면, 결과를 입력 필드로 옮김
+
+//------ 이전 연산 결과가 있고 새로운 입력이 시작되면, 결과를 입력 필드로 옮김------
       if (hasResult && RegExp(r'[0-9]').hasMatch(value)) {
         input = value;
         result = '';
         hasResult = false;
         return;
       }
-
-      // 숫자를 입력할 때
-      if (RegExp(r'[0-9]').hasMatch(value)) {
-        if (isNextOperand) {
-          input += value; // 연산자가 입력된 후 두 번째 숫자
-          isNextOperand = false; // 두 번째 피연산자 입력 완료
-        } else {
-          input += value; // 연속 숫자 입력을 위해 이어붙임
-        }
-      } else if (value == 'C') {
+//------ C 버튼을 누르면 입/출력 필드 초기화 ------
+      if (value == 'C') {
         input = '';
         result = '';
-        firstOperand = null;
-        operator = null;
-        isNextOperand = false;
         hasResult = false;
-      } else if (value == '⌫') {
-        // Backspace 기능: 입력된 마지막 글자를 삭제
+      }
+//------ BackSpace 버튼을 누를시 입력필드의 문자열 삭제 ------
+      else if (value == '⌫') {
         if (input.isNotEmpty) {
           input = input.substring(0, input.length - 1);
         }
-      } else if (value == '=') {
-        if (firstOperand != null && operator != null) {
-          double secondOperand = double.tryParse(input.split(operator!).last) ?? 0;
-          result = _calculate(firstOperand!, secondOperand, operator!);
-          hasResult = true; // 연산 결과가 출력된 상태
-        }
-      } else {
-        // 연산자가 입력된 경우
-        if (firstOperand == null) {
-          firstOperand = double.tryParse(input); // 첫 번째 피연산자를 저장
-        } else if (!isNextOperand) {
-          // 이미 피연산자가 있을 때는 현재 입력된 값을 두 번째 피연산자로 계산
-          double secondOperand = double.tryParse(input.split(operator!).last) ?? 0;
-          result = _calculate(firstOperand!, secondOperand, operator!);
-          firstOperand = double.tryParse(result); // 결과를 첫 번째 피연산자로 저장
-        }
-        operator = value; // 연산자 설정
-        input += ' $value '; // 연산자를 입력 필드에 표시
-        isNextOperand = true; // 두 번째 피연산자를 기다림
-        hasResult = false; // 새로운 연산 시작 시 결과를 초기화
+      }
+//------ '=' 버튼 누를시 수식을 계산 ------
+      else if (value == '=') {
+        result = _evaluateExpression(input);
+        hasResult = true;
+      }
+//---- 숫자나 연산자 버튼을 눌렀을 때 수식을 입력 필드에 추가 -----
+      else {
+        input += value;
       }
     });
   }
 
-  // 사칙연산을 처리하는 함수
-  String _calculate(double num1, double num2, String operator) {
-    switch (operator) {
-      case '+':
-        return (num1 + num2).toString();
-      case '-':
-        return (num1 - num2).toString();
-      case '*':
-        return (num1 * num2).toString();
-      case '/':
-        if (num2 == 0) return '0으로 나눌 수 없습니다.';
-        return (num1 / num2).toString();
-      default:
-        return 'Error';
+  // 입력 필드의 문자열 수식을 읽고 연산을 처리하는 함수
+  String _evaluateExpression(String expression) {
+    try {
+      Parser p = Parser();
+      Expression exp = p.parse(expression);
+      ContextModel cm = ContextModel();
+      double eval = exp.evaluate(EvaluationType.REAL, cm);
+      return eval.toString();
+    } catch (e) {
+      return 'Error';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final buttonSize = screenWidth / 4; // 버튼 크기는 화면 너비의 1/4로 설정
+    final buttonSize = screenWidth / 4;
 
     return CupertinoPageScaffold(
       backgroundColor: Colors.black,
@@ -149,6 +126,8 @@ class _CalculatorAppState extends State<CalculatorApp> {
               ),
             ),
           ),
+
+
           // 버튼 컨테이너
           Expanded(
             child: Center(
@@ -166,10 +145,10 @@ class _CalculatorAppState extends State<CalculatorApp> {
   // 버튼들을 GridView로 정렬
   Widget _buildButtonGrid(double buttonSize) {
     return GridView.count(
-      crossAxisCount: 4,
-      childAspectRatio: 1,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
+      crossAxisCount: 4, // 한 행에 4개의 버튼
+      childAspectRatio: 1, // 버튼의 가로 세로 비율을 동일하게 설정
+      mainAxisSpacing: 10, // 버튼들 사이의 세로 간격
+      crossAxisSpacing: 10, // 버튼들 사이의 가로 간격
       padding: const EdgeInsets.all(10),
       children: <Widget>[
         _buildButton('C', Colors.grey, Colors.black, buttonSize),
@@ -188,8 +167,8 @@ class _CalculatorAppState extends State<CalculatorApp> {
         _buildButton('2', Colors.grey[900]!, Colors.white, buttonSize),
         _buildButton('3', Colors.grey[900]!, Colors.white, buttonSize),
         _buildButton('+', Colors.orange, Colors.white, buttonSize),
-        _buildButton('0', Colors.grey[900]!, Colors.white, buttonSize, widthMultiplier: 2),
-        _buildButton('.', Colors.grey[900]!, Colors.white, buttonSize),
+        _buildButton('.', Colors.grey[900]!, Colors.white, buttonSize, widthMultiplier: 2),
+        _buildButton('0', Colors.grey[900]!, Colors.white, buttonSize),
         _buildButton('⌫', Colors.orange, Colors.white, buttonSize),
         _buildButton('=', Colors.orange, Colors.white, buttonSize),
       ],
