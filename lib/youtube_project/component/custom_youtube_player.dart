@@ -4,12 +4,11 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart'; // 유튜�
 
 // 유튜브 동영상 플레이어 위젯 클래스
 class CustomYoutubePlayer extends StatefulWidget {
-  // 동영상 데이터를 저장할 변수
-  final VideoModel videoModel;
+  final VideoModel videoModel; // 동영상 정보를 저장할 변수
 
   const CustomYoutubePlayer({
-    required this.videoModel, // 필수 매개변수
-    super.key, // 기본 키 매개변수
+    required this.videoModel, // 필수 매개변수로 동영상 모델 받기
+    super.key, // 기본 키 매개변수 사용
   });
 
   @override
@@ -34,9 +33,8 @@ class _CustomYoutubePlayerState extends State<CustomYoutubePlayer> {
 
   @override
   Widget build(BuildContext context) {
-    // build 함수는 세 번째 이미지로 연결됩니다.
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch, // 자식 위젯을 부모 너비에 맞춤
+      crossAxisAlignment: CrossAxisAlignment.stretch, // 자식 위젯을 부모 위젯의 너비에 맞춤
       children: [
         // 유튜브 플레이어 위젯
         YoutubePlayer(
@@ -57,5 +55,11 @@ class _CustomYoutubePlayerState extends State<CustomYoutubePlayer> {
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose(); // 부모 클래스의 dispose 호출
+    controller!.dispose(); // 컨트롤러 폐기하여 메모리 해제
   }
 }
